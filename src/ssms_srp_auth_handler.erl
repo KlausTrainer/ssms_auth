@@ -32,7 +32,7 @@ handle(Req, #ssms_srp_opts{generator=Generator, prime=Prime, multiplier=Multipli
             %% FIXME simulate the existence of an entry for this user name
             %% c.f. RFC 5054 section 2.5.1.3
             cowboy_req:reply(400, ?RESPONSE_HEADERS, <<"{\"error\":\"unknown_psk_identity\"}">>, Req);
-        {Salt, Verifier} ->
+        {ok, {Salt, Verifier}} ->
             ServerPrivKey = crypto:strong_rand_bytes(64),
             ServerPubKey = crypto:srp_value_B(Multiplier, Verifier, Generator, ServerPrivKey, Prime),
             U = crypto:srp6_value_u(ClientPubKey, ServerPubKey, Prime),

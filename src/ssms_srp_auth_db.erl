@@ -30,7 +30,7 @@ stop() ->
 lookup(Username) when is_binary(Username) ->
     case gen_server:call(?MODULE, {lookup, Username}, infinity) of
     not_found -> not_found;
-    {ok, Result} -> binary_to_term(Result, [safe])
+    {ok, Result} -> {ok, binary_to_term(Result, [safe])}
     end.
 
 -spec delete(binary()) -> ok.
