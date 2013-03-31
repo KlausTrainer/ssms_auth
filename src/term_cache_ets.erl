@@ -23,7 +23,7 @@
 -behaviour(gen_server).
 
 % public API
--export([start_link/1, stop/1]).
+-export([start/1, start_link/1, stop/1]).
 -export([get/2, get/3, put/3, delete/2, update/3]).
 -export([flush/1, get_info/1]).
 
@@ -103,6 +103,16 @@ get_info(Cache) ->
                   | {ttl, timeout()}.
 -type size() :: integer() | string() | binary() | atom().
 -type policy() :: lru | mru.
+
+-spec start(options()) -> {ok, pid()}.
+start(Options) ->
+    case value(name, Options, undefined) of
+    undefined ->
+        gen_server:start(?MODULE, Options, []);
+    Name ->
+        gen_server:start({local, Name}, ?MODULE, Options, [])
+    end.
+
 -spec start_link(options()) -> {ok, pid()}.
 start_link(Options) ->
     case value(name, Options, undefined) of

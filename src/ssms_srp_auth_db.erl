@@ -4,7 +4,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/1, stop/0]).
+-export([start/1, start_link/1, stop/0]).
 -export([lookup/1, delete/1, store/2]).
 
 %% gen_server callbacks
@@ -18,6 +18,11 @@
 
 -spec start(string()) -> {ok, pid()} | ignore | {error, term()}.
 start(DbPath) ->
+    gen_server:start({local, ?MODULE}, ?MODULE,
+                          [DbPath], []).
+
+-spec start_link(string()) -> {ok, pid()} | ignore | {error, term()}.
+start_link(DbPath) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE,
                           [DbPath], []).
 

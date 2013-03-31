@@ -25,7 +25,7 @@ init([]) ->
     Processes = [
         {
             ssms_srp_auth_db,
-            {ssms_srp_auth_db, start, ["priv/ssms_srp_auth_db.bitcask"]},
+            {ssms_srp_auth_db, start_link, ["priv/ssms_srp_auth_db.bitcask"]},
             permanent, 2000, worker, dynamic
         },
         {
@@ -35,7 +35,7 @@ init([]) ->
         },
         {
             ssms_web,
-            {ssms_web, start, [8443]},
+            {ssms_web, start, [8443, srp_2048]},
             permanent, 2000, worker, dynamic
         }
     ],

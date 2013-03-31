@@ -1,19 +1,16 @@
 -module(ssms_web).
 
 %% API
--export([start/1, stop/1]).
+-export([start/2, stop/1]).
 
 -include("ssms_srp.hrl").
 
--spec start(inet:port_number()) -> {ok, pid()}.
-start(Port) ->
+-spec start(inet:port_number(), ssms_srp_auth_handler:srp_config()) ->{ok, pid()}.
+start(Port, SrpConfig) ->
     PrivDir = code:priv_dir(ssms),
-    {Generator, Prime} = ssl_srp_primes:get_srp_params(srp_2048),
-    Multiplier = crypto:srp6a_multiplier(Generator, Prime),
-    Opts = #ssms_srp_opts{generator=Generator, prime=Prime, multiplier=Multiplier},
     Dispatch = cowboy_router:compile([
         {'_', [
-            {"/srp_auth", ssms_srp_auth_handler, Opts}
+            {"/srp_auth", ssms_srp_auth_handler, SrpConfig}
         ]}
     ]),
     cowboy:start_https(?MODULE, 64, [

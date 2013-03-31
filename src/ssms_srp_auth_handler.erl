@@ -6,21 +6,36 @@
 
 -export([handle/2]).
 
+-type srp_config() :: srp_1024 | srp_2048.
+-export_type([srp_config/0]).
+
+-record(srp_opts, {
+    generator = <<>> :: binary(),
+    prime = <<>> :: binary(),
+    multiplier = <<>> :: binary()
+}).
+-type srp_opts() :: #srp_opts{}.
+
 -include("ssms_srp.hrl").
 
 -define(RESPONSE_HEADERS, [{<<"Content-Type">>, <<"application/json; charset=utf-8">>}]).
 
 %% External API
 
-init(_Transport, Req, Opts) ->
-    {ok, Req, Opts}.
+-spec init({ssl, http}, cowboy_req:req(), srp_config()) -> {ok, cowboy_req:req(), srp_opts()}.
+init({ssl, http}, Req, SrpConfig) when SrpConfig =:= srp_1024; SrpConfig =:= srp_2048 ->
+    {Generator, Prime} = ?SRP_PARAMS(SrpConfig),
+    Multiplier = ?SRP6a_MULTIPLIER(SrpConfig),
+    SrpOpts = #srp_opts{generator=Generator, prime=Prime, multiplier=Multiplier},
+    {ok, Req, SrpOpts}.
 
 terminate(_Reason, _Req, _State) ->
     ok.
 
 %% Internal API
 
-handle(Req, #ssms_srp_opts{generator=Generator, prime=Prime, multiplier=Multiplier} = Opts) ->
+-spec handle(cowboy_req:req(), srp_opts()) -> {ok, cowboy_req:req(), srp_opts()}.
+handle(Req, #srp_opts{generator=Generator, prime=Prime, multiplier=Multiplier} = Opts) ->
     {<<"POST">>, _} = cowboy_req:method(Req),
     {ok, Body, _} = cowboy_req:body(Req),
     {ok, Res} = case parse_req_body(Body) of

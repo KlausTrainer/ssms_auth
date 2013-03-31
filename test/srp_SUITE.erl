@@ -14,7 +14,7 @@ all() ->
 groups() ->
     [
         {srp_unit, [], [srp6a_unit]},
-        {srp_integration, [], [srp6a_integration]}
+        {srp_integration, [], [{srp6a_integration, [parallel, {repeat, 50}], [srp6a_integration, srp6a_integration]}]}
     ].
 
 init_per_suite(Config) ->
@@ -24,41 +24,39 @@ init_per_suite(Config) ->
 end_per_suite(_Config) ->
     ok = crypto:stop().
 
-init_per_group(_GroupName, Config) ->
-    Config.
-
-end_per_group(_GroupName, Config) ->
-    Config.
-
-init_per_testcase(srp6a_integration, Config) ->
+init_per_group(srp_integration, Config) ->
     ok = application:start(ranch),
     ok = application:start(cowboy),
     ok = application:start(inets),
+    ok = httpc:set_options([{max_keep_alive_length, 0}, {max_sessions, 4}]),
+    SrpConfig = srp_2048,
     {ok, _} = ssms_srp_auth_db:start(code:lib_dir(ssms) ++ "/test/ssms_srp_auth_test_db.bitcask"),
-    {ok, _} = term_cache_ets:start_link([{ttl, 60000}, {name, ?SRP_AUTH_CACHE}]),
-    {ok, _} = ssms_web:start(0),
+    {ok, _} = term_cache_ets:start([{ttl, 60000}, {name, ?SRP_AUTH_CACHE}]),
+    {ok, _} = ssms_web:start(0, SrpConfig),
     {ok, SsmsWebPort} = ranch_listener:get_port(ranch_server:lookup_listener(ssms_web)),
+    {Generator, Prime} = ?SRP_PARAMS(SrpConfig),
+    Multiplier = ?SRP6a_MULTIPLIER(SrpConfig),
     Salt = crypto:strong_rand_bytes(32),
-    {Generator, Prime} = ssl_srp_primes:get_srp_params(srp_2048),
     Username = <<"alice">>,
     Password = <<"password123">>,
     UserPassHash = crypto:sha([Salt, crypto:sha([Username, <<$:>>, Password])]),
     Verifier = crypto:srp_mod_exp(Generator, UserPassHash, Prime),
     ssms_srp_auth_db:store(Username, {Salt, Verifier}),
-    [{ssms_web_port, SsmsWebPort}, {generator, Generator},
-     {prime, Prime}, {username, Username}, {password, Password} | Config];
-init_per_testcase(_Name, Config) ->
+    [{ssms_web_port, SsmsWebPort}, {generator, Generator}, {prime, Prime},
+     {multiplier, Multiplier}, {username, Username}, {password, Password}
+     | Config];
+init_per_group(_GroupName, Config) ->
     Config.
 
-end_per_testcase(srp6a_integration, Config) ->
-    ssms_srp_auth_db:delete(?config(username, Config)),
+end_per_group(srp_integration, Config) ->
+    ok = ssms_srp_auth_db:delete(?config(username, Config)),
     ok = ssms_srp_auth_db:stop(),
     ok = term_cache_ets:stop(?SRP_AUTH_CACHE),
     ok = application:stop(inets),
     ok = application:stop(cowboy),
     ok = application:stop(ranch),
     Config;
-end_per_testcase(_Name, Config) ->
+end_per_group(_GroupName, Config) ->
     Config.
 
 %%
@@ -66,11 +64,12 @@ end_per_testcase(_Name, Config) ->
 %% Stolen from Erlang/OTP 'lib/crypto/test/crypto_SUITE.erl'.
 %%
 srp6a_unit(_Config) ->
+    SrpConfig = srp_1024,
     Username = <<"alice">>, % I
     Password = <<"password123">>,
     Salt = hexstr2bin("BEB25379D1A8581EB5A727673A2441EE"),
-    {Generator, Prime} = ssl_srp_primes:get_srp_params(srp_1024),
-    Multiplier = crypto:srp6a_multiplier(Generator, Prime), % k
+    {Generator, Prime} = ?SRP_PARAMS(SrpConfig),
+    Multiplier = ?SRP6a_MULTIPLIER(SrpConfig), % k
     %% X = hexstr2bin("94B7555AABE9127CC58CCF4993DB6CF84D16C124"),
     Verifier = hexstr2bin("7E273DE8696FFC4F4E337D05B4B375BEB0DDE1569E8FA00A9886D812"
             "9BADA1F1822223CA1A605B530E379BA4729FDC59F105B4787E5186F5"
@@ -113,7 +112,7 @@ srp6a_integration(Config) ->
     Password = ?config(password, Config),
     Generator = ?config(generator, Config),
     Prime = ?config(prime, Config),
-    Multiplier = crypto:srp6a_multiplier(Generator, Prime),
+    Multiplier = ?config(multiplier, Config),
     ClientPrivKey = crypto:strong_rand_bytes(64),
     ClientPubKey = crypto:srp_mod_exp(Generator, ClientPrivKey, Prime),
     HttpOptions = [{ssl, [{verify, verify_none}]}],
