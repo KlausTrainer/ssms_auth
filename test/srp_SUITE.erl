@@ -33,7 +33,7 @@ init_per_group(srp_integration, Config) ->
     {ok, _} = ssms_srp_auth_db:start(code:lib_dir(ssms) ++ "/test/ssms_srp_auth_test_db.bitcask"),
     {ok, _} = term_cache_ets:start([{ttl, 60000}, {name, ?SRP_AUTH_CACHE}]),
     {ok, _} = ssms_web:start(0, SrpConfig),
-    {ok, SsmsWebPort} = ranch_listener:get_port(ranch_server:lookup_listener(ssms_web)),
+    SsmsWebPort = ranch:get_port(ssms_web),
     {Generator, Prime} = ?SRP_PARAMS(SrpConfig),
     Multiplier = ?SRP6a_MULTIPLIER(SrpConfig),
     Salt = crypto:strong_rand_bytes(32),
