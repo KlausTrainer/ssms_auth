@@ -12,7 +12,7 @@
 -record(srp_opts, {
     generator = <<>> :: binary(),
     prime = <<>> :: binary(),
-    multiplier = <<>> :: binary()
+    version = '6a' :: '6a'
 }).
 -type srp_opts() :: #srp_opts{}.
 
@@ -24,9 +24,8 @@
 
 -spec init({ssl, http}, cowboy_req:req(), srp_config()) -> {ok, cowboy_req:req(), srp_opts()}.
 init({ssl, http}, Req, SrpConfig) when SrpConfig =:= srp_1024; SrpConfig =:= srp_2048 ->
-    {Generator, Prime} = ?SRP_PARAMS(SrpConfig),
-    Multiplier = ?SRP6a_MULTIPLIER(SrpConfig),
-    SrpOpts = #srp_opts{generator=Generator, prime=Prime, multiplier=Multiplier},
+    {Generator, Prime} = ssl_srp_primes:get_srp_params(SrpConfig),
+    SrpOpts = #srp_opts{generator=Generator, prime=Prime, version='6a'},
     {ok, Req, SrpOpts}.
 
 terminate(_Reason, _Req, _State) ->
@@ -35,27 +34,25 @@ terminate(_Reason, _Req, _State) ->
 %% Internal API
 
 -spec handle(cowboy_req:req(), srp_opts()) -> {ok, cowboy_req:req(), srp_opts()}.
-handle(Req, #srp_opts{generator=Generator, prime=Prime, multiplier=Multiplier} = Opts) ->
+handle(Req, #srp_opts{generator=Generator, prime=Prime, version=Version} = Opts) ->
     {<<"POST">>, _} = cowboy_req:method(Req),
     {ok, Body, _} = cowboy_req:body(Req),
     {ok, Res} = case parse_req_body(Body) of
     error ->
         cowboy_req:reply(400, ?RESPONSE_HEADERS, <<"{\"error\":\"bad request\"}">>, Req);
-    {{'I', Username}, {'A', ClientPubKey}} ->
+    {{'I', Username}, {'A', ClientPublic}} ->
         case ssms_srp_auth_db:lookup(Username) of
         not_found ->
             %% FIXME simulate the existence of an entry for this user name
             %% c.f. RFC 5054 section 2.5.1.3
             cowboy_req:reply(400, ?RESPONSE_HEADERS, <<"{\"error\":\"unknown_psk_identity\"}">>, Req);
         {ok, {Salt, Verifier}} ->
-            ServerPrivKey = crypto:strong_rand_bytes(64),
-            ServerPubKey = crypto:srp_value_B(Multiplier, Verifier, Generator, ServerPrivKey, Prime),
-            U = crypto:srp6_value_u(ClientPubKey, ServerPubKey, Prime),
-            ServerSecret = crypto:srp_server_secret(Verifier, ServerPrivKey, U, ClientPubKey, Prime),
+            {ServerPublic, ServerPrivate} = crypto:srp_generate_key(Verifier, Generator, Prime, Version),
+            SessionKey = crypto:srp_compute_key(Verifier, Prime, ClientPublic, ServerPublic, ServerPrivate, Version),
             Response = jiffy:encode(
                 {[{<<"s">>, base64:encode(Salt)},
-                {<<"B">>, base64:encode(ServerPubKey)}]}),
-            term_cache_ets:put(?SRP_AUTH_CACHE, ServerSecret, true),
+                {<<"B">>, base64:encode(ServerPublic)}]}),
+            term_cache_ets:put(?SRP_AUTH_CACHE, SessionKey, true),
             cowboy_req:reply(200, ?RESPONSE_HEADERS, Response, Req)
         end;
     {'M', ClientSecret} ->
