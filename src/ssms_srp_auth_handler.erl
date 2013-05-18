@@ -47,8 +47,8 @@ handle(Req, #srp_opts{generator=Generator, prime=Prime, version=Version} = Opts)
             %% c.f. RFC 5054 section 2.5.1.3
             cowboy_req:reply(400, ?RESPONSE_HEADERS, <<"{\"error\":\"unknown_psk_identity\"}">>, Req);
         {ok, {Salt, Verifier}} ->
-            {ServerPublic, ServerPrivate} = crypto:srp_generate_key(Verifier, Generator, Prime, Version),
-            SessionKey = crypto:srp_compute_key(Verifier, Prime, ClientPublic, ServerPublic, ServerPrivate, Version),
+            {ServerPublic, ServerPrivate} = crypto:generate_key(srp, {host, [Verifier, Generator, Prime, Version]}),
+            SessionKey = crypto:compute_key(srp, ClientPublic, {ServerPublic, ServerPrivate}, {host, [Verifier, Prime, Version]}),
             Response = jiffy:encode(
                 {[{<<"s">>, base64:encode(Salt)},
                 {<<"B">>, base64:encode(ServerPublic)}]}),

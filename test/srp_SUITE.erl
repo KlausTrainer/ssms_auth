@@ -38,8 +38,8 @@ init_per_group(srp_integration, Config) ->
     Salt = crypto:strong_rand_bytes(32),
     Username = <<"alice">>,
     Password = <<"password123">>,
-    UserPassHash = crypto:sha([Salt, crypto:sha([Username, <<$:>>, Password])]),
-    Verifier = crypto:mod_exp_prime(Generator, UserPassHash, Prime),
+    UserPassHash = crypto:hash(sha, [Salt, crypto:hash(sha, [Username, <<$:>>, Password])]),
+    Verifier = crypto:mod_pow(Generator, UserPassHash, Prime),
     ssms_srp_auth_db:store(Username, {Salt, Verifier}),
     [{ssms_web_port, SsmsWebPort}, {generator, Generator}, {prime, Prime},
      {username, Username}, {password, Password} | Config];
@@ -93,12 +93,12 @@ srp6a_unit(_Config) ->
                 "41BB59B6D5979B5C00A172B4A2A5903A0BDCAF8A709585EB2AFAFA8F"
                 "3499B200210DCC1F10EB33943CD67FC88A2F39A4BE5BEC4EC0A3212D"
                 "C346D7E474B29EDE8A469FFECA686E5A"),
-    UserPassHash = crypto:sha([Salt, crypto:sha([Username, <<$:>>, Password])]), % x
-    Verifier = crypto:mod_exp_prime(Generator, UserPassHash, Prime), % v
-    {ClientPublic, ClientPrivate} = crypto:srp_generate_key(Generator, Prime, Version, ClientPrivate),
-    {ServerPublic, ServerPrivate} = crypto:srp_generate_key(Verifier, Generator, Prime, Version, ServerPrivate),
-    SessionKey = crypto:srp_compute_key(UserPassHash, Prime, Generator, ClientPublic, ClientPrivate, ServerPublic, Version, Scrambler),
-    SessionKey = crypto:srp_compute_key(Verifier, Prime, ClientPublic, ServerPublic, ServerPrivate, Version, Scrambler).
+    UserPassHash = crypto:hash(sha, [Salt, crypto:hash(sha, [Username, <<$:>>, Password])]), % x
+    Verifier = crypto:mod_pow(Generator, UserPassHash, Prime), % v
+    {ClientPublic, ClientPrivate} = crypto:generate_key(srp, {user, [Generator, Prime, Version]}, ClientPrivate),
+    {ServerPublic, ServerPrivate} = crypto:generate_key(srp, {host, [Verifier, Generator, Prime, Version]}, ServerPrivate),
+    SessionKey = crypto:compute_key(srp, ServerPublic, {ClientPublic, ClientPrivate}, {user, [UserPassHash, Prime, Generator, Version, Scrambler]}),
+    SessionKey = crypto:compute_key(srp, ClientPublic, {ServerPublic, ServerPrivate}, {host, [Verifier, Prime, Version, Scrambler]}).
 
 srp6a_integration(Config) ->
     SsmsWebPort = ?config(ssms_web_port, Config),
@@ -107,7 +107,7 @@ srp6a_integration(Config) ->
     Generator = ?config(generator, Config),
     Prime = ?config(prime, Config),
     Version = '6a',
-    {ClientPublic, ClientPrivate} = crypto:srp_generate_key(Generator, Prime, Version),
+    {ClientPublic, ClientPrivate} = crypto:generate_key(srp, {user, [Generator, Prime, Version]}),
     HttpOptions = [{ssl, [{verify, verify_none}]}],
     Options = [{body_format, binary}],
     Url = "https://127.0.0.1:" ++ integer_to_list(SsmsWebPort) ++ "/srp_auth",
@@ -136,9 +136,8 @@ srp6a_integration(Config) ->
     {Params1} = jiffy:decode(Response1),
     Salt = base64:decode(proplists:get_value(<<"s">>, Params1)),
     ServerPublic = base64:decode(proplists:get_value(<<"B">>, Params1)),
-    UserPassHash = crypto:sha([Salt, crypto:sha([Username, <<$:>>, Password])]),
-    M = crypto:srp_compute_key(UserPassHash, Prime, Generator, ClientPublic,
-                               ClientPrivate, ServerPublic, Version),
+    UserPassHash = crypto:hash(sha, [Salt, crypto:hash(sha, [Username, <<$:>>, Password])]),
+    M = crypto:compute_key(srp, ServerPublic, {ClientPublic, ClientPrivate}, {user, [UserPassHash, Prime, Generator, Version]}),
     BadRequest6 = create_request(Url, [{'M',  base64:encode(M)}, {<<"Foo">>, <<"Bar">>}]),
     {ok, {{_, 400, _}, _, <<"{\"error\":\"bad request\"}">>}} =
         httpc:request(post, BadRequest6, HttpOptions, Options),
