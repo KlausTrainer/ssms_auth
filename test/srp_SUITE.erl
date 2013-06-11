@@ -148,7 +148,7 @@ srp6a_integration(Config) ->
         httpc:request(post, GoodRequest2, HttpOptions, Options),
     ok.
 
-srp6a_benchmark(Config) ->
+srp6a_benchmark(_Config) ->
     Verifier = <<102,38,89,197,126,4,196,82,10,252,163,184,186,71,172,104,240,219,
                  106,76,255,60,70,182,231,222,40,111,82,51,201,200,112,71,193,245,
                  140,95,252,35,122,206,105,202,254,12,189,67,154,26,19,206,225,13,
@@ -196,7 +196,7 @@ srp6a_benchmark(Config) ->
                      220,208,152,143,97,208,155,74,145,138,134,134,19,118,16,188>>,
     times(fun () ->
               {ServerPublic, ServerPrivate} = crypto:generate_key(srp, {host, [Verifier, Generator, Prime, Version]}),
-              SessionKey = crypto:compute_key(srp, ClientPublic, {ServerPublic, ServerPrivate}, {host, [Verifier, Prime, Version]})
+              _SessionKey = crypto:compute_key(srp, ClientPublic, {ServerPublic, ServerPrivate}, {host, [Verifier, Prime, Version]})
           end, 1000).
 
 %%
@@ -223,7 +223,7 @@ mkint(C) when $A =< C, C =< $F ->
 mkint(C) when $a =< C, C =< $f ->
     C - $a + 10.
 
-times(Fun, 0) -> ok;
+times(_Fun, 0) -> ok;
 times(Fun, I) ->
     Fun(),
     times(Fun, I - 1).
