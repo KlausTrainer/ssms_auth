@@ -20,11 +20,13 @@ groups() ->
     ].
 
 init_per_suite(Config) ->
-    ok = crypto:start(),
+    ok = application:start(crypto),
+    ok = application:start(asn1),
     Config.
 
 end_per_suite(_Config) ->
-    ok = crypto:stop().
+    ok = application:stop(asn1),
+    ok = application:stop(crypto).
 
 init_per_group(srp_integration, Config) ->
     ok = application:start(ranch),
