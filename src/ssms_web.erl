@@ -5,7 +5,7 @@
 
 -include("ssms_srp.hrl").
 
--spec start(inet:port_number(), ssms_srp_auth_handler:srp_config()) ->{ok, pid()}.
+-spec start(inet:port_number(), ssms_srp_auth_handler:srp_config()) -> {ok, pid()}.
 start(Port, SrpConfig) ->
     PrivDir = code:priv_dir(ssms),
     Dispatch = cowboy_router:compile([

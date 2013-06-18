@@ -2,9 +2,12 @@
 -module(ssms_srp_auth_handler).
 
 %% API
--export([init/3, terminate/3]).
+-export([init/3]).
+-export([rest_init/2]).
+-export([allowed_methods/2]).
+-export([content_types_accepted/2]).
 
--export([handle/2]).
+-export([handle_post/2]).
 
 -type srp_config() :: srp_1024 | srp_2048.
 -export_type([srp_config/0]).
@@ -18,24 +21,29 @@
 
 -include("ssms_srp.hrl").
 
--define(RESPONSE_HEADERS, [{<<"Content-Type">>, <<"application/json; charset=utf-8">>}]).
+-define(RESPONSE_HEADERS, [{<<"content-type">>, <<"application/json; charset=utf-8">>}]).
 
 %% External API
 
 -spec init({ssl, http}, cowboy_req:req(), srp_config()) -> {ok, cowboy_req:req(), srp_opts()}.
-init({ssl, http}, Req, SrpConfig) when SrpConfig =:= srp_1024; SrpConfig =:= srp_2048 ->
+init(_Transport, _Req, SrpConfig) when SrpConfig =:= srp_1024; SrpConfig =:= srp_2048 ->
+	{upgrade, protocol, cowboy_rest}.
+
+rest_init(Req, SrpConfig) ->
     {Generator, Prime} = ssl_srp_primes:get_srp_params(SrpConfig),
     SrpOpts = #srp_opts{generator=Generator, prime=Prime, version='6a'},
     {ok, Req, SrpOpts}.
 
-terminate(_Reason, _Req, _State) ->
-    ok.
+allowed_methods(Req, State) ->
+    {[<<"POST">>], Req, State}.
+
+content_types_accepted(Req, State) ->
+    {[{{<<"application">>, <<"json">>, []}, handle_post}], Req, State}.
 
 %% Internal API
 
--spec handle(cowboy_req:req(), srp_opts()) -> {ok, cowboy_req:req(), srp_opts()}.
-handle(Req, #srp_opts{generator=Generator, prime=Prime, version=Version} = Opts) ->
-    {<<"POST">>, _} = cowboy_req:method(Req),
+-spec handle_post(cowboy_req:req(), srp_opts()) -> {ok, cowboy_req:req(), srp_opts()}.
+handle_post(Req, #srp_opts{generator=Generator, prime=Prime, version=Version} = Opts) ->
     {ok, Body, _} = cowboy_req:body(Req),
     {ok, Res} = case parse_req_body(Body) of
     error ->
@@ -63,7 +71,7 @@ handle(Req, #srp_opts{generator=Generator, prime=Prime, version=Version} = Opts)
             cowboy_req:reply(200, ?RESPONSE_HEADERS, <<"{}">>, Req)
         end
     end,
-    {ok, Res, Opts}.
+    {Res, Req, Opts}.
 
 parse_req_body(Body) ->
     try

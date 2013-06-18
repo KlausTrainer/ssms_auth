@@ -15,17 +15,15 @@ all() ->
 groups() ->
     [
         {srp_unit, [], [srp6a_unit]},
-        {srp_integration, [], [{srp6a_integration, [parallel, {repeat, 50}], [srp6a_integration, srp6a_integration]}]},
+        {srp_integration, [], [srp6a_integration]},
         {srp_benchmark, [], [{srp6a_benchmark, [parallel], [srp6a_benchmark, srp6a_benchmark]}]}
     ].
 
 init_per_suite(Config) ->
     ok = application:start(crypto),
-    ok = application:start(asn1),
     Config.
 
 end_per_suite(_Config) ->
-    ok = application:stop(asn1),
     ok = application:stop(crypto).
 
 init_per_group(srp_integration, Config) ->
