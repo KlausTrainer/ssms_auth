@@ -5,8 +5,6 @@
 
 -include("ssms_srp.hrl").
 
--define(JSON(EJson), iolist_to_binary(jiffy:encode(EJson))).
-
 all() ->
     [
         {group, srp_unit},
@@ -116,13 +114,13 @@ srp6a_integration(Config) ->
     Url = "https://127.0.0.1:" ++ integer_to_list(SsmsWebPort) ++ "/srp_auth",
     BadRequest1 = <<>>,
     BadRequest2 = <<"{}">>,
-    BadRequest3 = ?JSON({[{'I', base64:encode(<<"foobator42">>)},
+    BadRequest3 = jiffy:encode({[{'I', base64:encode(<<"foobator42">>)},
                                  {'A', base64:encode(crypto:rand_bytes(256))}]}),
-    BadRequest4 = ?JSON({[{'M', base64:encode(crypto:rand_bytes(256))}]}),
-    BadRequest5 = ?JSON({[{'I', base64:encode(Username)},
+    BadRequest4 = jiffy:encode({[{'M', base64:encode(crypto:rand_bytes(256))}]}),
+    BadRequest5 = jiffy:encode({[{'I', base64:encode(Username)},
                                  {'A', base64:encode(ClientPublic)},
                                  {<<"Foo">>, <<"Bar">>}]}),
-    GoodRequest1 = ?JSON({[{'I', base64:encode(Username)},
+    GoodRequest1 = jiffy:encode({[{'I', base64:encode(Username)},
                                   {'A', base64:encode(ClientPublic)}]}),
     {ok, "400", _, <<"{\"error\":\"bad request\"}">>} =
         ibrowse:send_req(Url, Headers, post, BadRequest1, Options),
@@ -141,10 +139,10 @@ srp6a_integration(Config) ->
     ServerPublic = base64:decode(proplists:get_value(<<"B">>, Params1)),
     UserPassHash = crypto:hash(sha, [Salt, crypto:hash(sha, [Username, <<$:>>, Password])]),
     M = crypto:compute_key(srp, ServerPublic, {ClientPublic, ClientPrivate}, {user, [UserPassHash, Prime, Generator, Version]}),
-    BadRequest6 = ?JSON({[{'M', base64:encode(M)}, {<<"Foo">>, <<"Bar">>}]}),
+    BadRequest6 = jiffy:encode({[{'M', base64:encode(M)}, {<<"Foo">>, <<"Bar">>}]}),
     {ok, "400", _, <<"{\"error\":\"bad request\"}">>} =
         ibrowse:send_req(Url, Headers, post, BadRequest6, Options),
-    GoodRequest2 = ?JSON({[{'M', base64:encode(M)}]}),
+    GoodRequest2 = jiffy:encode({[{'M', base64:encode(M)}]}),
     {ok, "200", _, <<"{}">>} =
         ibrowse:send_req(Url, Headers, post, GoodRequest2, Options),
     ok.
