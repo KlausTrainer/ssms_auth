@@ -29,8 +29,7 @@ end_per_suite(_Config) ->
 init_per_group(srp_integration, Config) ->
     ok = application:start(ranch),
     ok = application:start(cowboy),
-    ok = application:start(inets),
-    ok = httpc:set_options([{max_keep_alive_length, 0}, {max_sessions, 4}]),
+    ok = application:start(ibrowse),
     SrpConfig = srp_2048,
     {ok, _} = ssms_srp_auth_db:start(code:lib_dir(ssms) ++ "/test/ssms_srp_auth_test_db.bitcask"),
     {ok, _} = term_cache_ets:start([{ttl, 60000}, {name, ?SRP_AUTH_CACHE}]),
@@ -52,7 +51,7 @@ end_per_group(srp_integration, Config) ->
     ok = ssms_srp_auth_db:delete(?config(username, Config)),
     ok = ssms_srp_auth_db:stop(),
     ok = term_cache_ets:stop(?SRP_AUTH_CACHE),
-    ok = application:stop(inets),
+    ok = application:stop(ibrowse),
     ok = application:stop(cowboy),
     ok = application:stop(ranch),
     Config;
@@ -110,42 +109,42 @@ srp6a_integration(Config) ->
     Prime = ?config(prime, Config),
     Version = '6a',
     {ClientPublic, ClientPrivate} = crypto:generate_key(srp, {user, [Generator, Prime, Version]}),
-    HttpOptions = [{ssl, [{verify, verify_none}]}],
-    Options = [{body_format, binary}],
+    Headers = [{"Content-Type", "application/json"}],
+    Options = [{response_format, binary}, {ssl_options, [{verify, verify_none}]}],
     Url = "https://127.0.0.1:" ++ integer_to_list(SsmsWebPort) ++ "/srp_auth",
-    BadRequest1 = create_request(Url, <<>>),
-    BadRequest2 = create_request(Url, <<"{}">>),
-    BadRequest3 = create_request(Url, [{'I', base64:encode(<<"foobator42">>)},
-                                       {'A', base64:encode(crypto:rand_bytes(256))}]),
-    BadRequest4 = create_request(Url, [{'M', base64:encode(crypto:rand_bytes(256))}]),
-    BadRequest5 = create_request(Url, [{'I',  base64:encode(Username)},
-                                       {'A', base64:encode(ClientPublic)},
-                                       {<<"Foo">>, <<"Bar">>}]),
-    GoodRequest1 = create_request(Url, [{'I',  base64:encode(Username)},
-                                       {'A', base64:encode(ClientPublic)}]),
-    {ok, {{_, 400, _}, _, <<"{\"error\":\"bad request\"}">>}} =
-        httpc:request(post, BadRequest1, HttpOptions, Options),
-    {ok, {{_, 400, _}, _, <<"{\"error\":\"bad request\"}">>}} =
-        httpc:request(post, BadRequest2, HttpOptions, Options),
-    {ok, {{_, 400, _}, _, <<"{\"error\":\"unknown_psk_identity\"}">>}} =
-        httpc:request(post, BadRequest3, HttpOptions, Options),
-    {ok, {{_, 400, _}, _, <<"{\"error\":\"bad_record_mac\"}">>}} =
-        httpc:request(post, BadRequest4, HttpOptions, Options),
-    {ok, {{_, 400, _}, _, <<"{\"error\":\"bad request\"}">>}} =
-        httpc:request(post, BadRequest5, HttpOptions, Options),
-    {ok, {{_, 200, _}, _, Response1}} =
-        httpc:request(post, GoodRequest1, HttpOptions, Options),
+    BadRequest1 = <<>>,
+    BadRequest2 = <<"{}">>,
+    BadRequest3 = jiffy:encode({[{'I', base64:encode(<<"foobator42">>)},
+                                 {'A', base64:encode(crypto:rand_bytes(256))}]}),
+    BadRequest4 = jiffy:encode({[{'M', base64:encode(crypto:rand_bytes(256))}]}),
+    BadRequest5 = jiffy:encode({[{'I', base64:encode(Username)},
+                                 {'A', base64:encode(ClientPublic)},
+                                 {<<"Foo">>, <<"Bar">>}]}),
+    GoodRequest1 = jiffy:encode({[{'I', base64:encode(Username)},
+                                  {'A', base64:encode(ClientPublic)}]}),
+    {ok, "400", _, <<"{\"error\":\"bad request\"}">>} =
+        ibrowse:send_req(Url, Headers, post, BadRequest1, Options),
+    {ok, "400", _, <<"{\"error\":\"bad request\"}">>} =
+        ibrowse:send_req(Url, Headers, post, BadRequest2, Options),
+    {ok, "400", _, <<"{\"error\":\"unknown_psk_identity\"}">>} =
+        ibrowse:send_req(Url, Headers, post, BadRequest3, Options),
+    {ok, "400", _, <<"{\"error\":\"bad_record_mac\"}">>} =
+        ibrowse:send_req(Url, Headers, post, BadRequest4, Options),
+    {ok, "400", _, <<"{\"error\":\"bad request\"}">>} =
+        ibrowse:send_req(Url, Headers, post, BadRequest5, Options),
+    {ok, "200", _, Response1} =
+        ibrowse:send_req(Url, Headers, post, GoodRequest1, Options),
     {Params1} = jiffy:decode(Response1),
     Salt = base64:decode(proplists:get_value(<<"s">>, Params1)),
     ServerPublic = base64:decode(proplists:get_value(<<"B">>, Params1)),
     UserPassHash = crypto:hash(sha, [Salt, crypto:hash(sha, [Username, <<$:>>, Password])]),
     M = crypto:compute_key(srp, ServerPublic, {ClientPublic, ClientPrivate}, {user, [UserPassHash, Prime, Generator, Version]}),
-    BadRequest6 = create_request(Url, [{'M',  base64:encode(M)}, {<<"Foo">>, <<"Bar">>}]),
-    {ok, {{_, 400, _}, _, <<"{\"error\":\"bad request\"}">>}} =
-        httpc:request(post, BadRequest6, HttpOptions, Options),
-    GoodRequest2 = create_request(Url, [{'M',  base64:encode(M)}]),
-    {ok, {{_, 200, _}, _, <<"{}">>}} =
-        httpc:request(post, GoodRequest2, HttpOptions, Options),
+    BadRequest6 = jiffy:encode({[{'M', base64:encode(M)}, {<<"Foo">>, <<"Bar">>}]}),
+    {ok, "400", _, <<"{\"error\":\"bad request\"}">>} =
+        ibrowse:send_req(Url, Headers, post, BadRequest6, Options),
+    GoodRequest2 = jiffy:encode({[{'M', base64:encode(M)}]}),
+    {ok, "200", _, <<"{}">>} =
+        ibrowse:send_req(Url, Headers, post, GoodRequest2, Options),
     ok.
 
 srp6a_benchmark(_Config) ->
@@ -202,11 +201,6 @@ srp6a_benchmark(_Config) ->
 %%
 %% helper functions
 %%
-
-create_request(Url, Body) when is_binary(Body) ->
-    {Url, [], "application/json", Body};
-create_request(Url, Params) when is_list(Params) ->
-    {Url, [], "application/json", jiffy:encode({Params})}.
 
 hexstr2bin(S) ->
     list_to_binary(hexstr2list(S)).
