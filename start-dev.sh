@@ -1,4 +1,4 @@
 #!/bin/sh
 cd `dirname $0`
 
-exec erl -pa `pwd`/ebin `pwd`/deps/*/ebin -s ssms -s reloader
+exec erl -pa erl -pa $(pwd)/ebin $(find $(pwd)/deps -type d -name ebin | xargs) -s ssms -s reloader
