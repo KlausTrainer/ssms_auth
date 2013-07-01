@@ -19,6 +19,4 @@ dep_ibrowse = https://github.com/cmullaparthi/ibrowse.git v4.0.2
 
 include erlang.mk
 
-check: tests
-
-test: tests
+check test: tests
