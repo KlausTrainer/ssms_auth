@@ -4,8 +4,8 @@
 -export([start/0]).
 
 start() ->
-    application:start(crypto),
-    application:start(ranch),
-    application:start(cowboy),
-    application:start(sasl),
+    ok = application:start(crypto),
+    ok = application:start(ranch),
+    ok = application:start(cowboy),
+    ok = application:start(sasl),
     ok = application:start(ssms).

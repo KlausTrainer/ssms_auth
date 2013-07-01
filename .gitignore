@@ -12,4 +12,5 @@
 /priv/*.bitcask
 /test/*.bitcask
 *.beam
+*.plt
 erl_crash.dump

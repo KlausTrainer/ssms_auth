@@ -1,28 +1,24 @@
-REBAR:=$(shell which rebar || echo ./rebar)
+PROJECT = ssms
 
-all: get-deps compile-all
+# options
 
-get-deps:
-	@$(REBAR) get-deps
+CT_SUITES = srp
+PLT_APPS = crypto asn1 public_key ssl sasl
 
-compile-all:
-	@$(REBAR) compile
+# dependencies
 
-compile:
-	@$(REBAR) skip_deps=true compile
+DEPS = cowboy jiffy bitcask
+dep_cowboy = https://github.com/extend/cowboy.git 0.8.6
+dep_jiffy = https://github.com/davisp/jiffy.git 0.8.4
+dep_bitcask = https://github.com/basho/bitcask.git 1.6.3
 
-check: compile
-	@$(REBAR) skip_deps=true ct
+TEST_DEPS = ibrowse
+dep_ibrowse = https://github.com/cmullaparthi/ibrowse.git v4.0.2
 
-test: check
+# standard targets
 
-dialyze: compile
-	dialyzer ebin
+include erlang.mk
 
-doc:
-	@$(REBAR) doc
+check: tests
 
-clean:
-	@rm -rf test/*.beam
-	@rm -rf erl_crash.dump
-	@$(REBAR) skip_deps=true clean
+test: tests

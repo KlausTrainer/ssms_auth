@@ -1,7 +1,7 @@
 -module(ssms_web).
 
 %% API
--export([start/2, stop/1]).
+-export([start/2, stop/0]).
 
 -include("ssms_srp.hrl").
 
@@ -20,5 +20,5 @@ start(Port, SrpConfig) ->
         {keyfile, PrivDir ++ "/ssl/server.key"}
     ], [{env, [{dispatch, Dispatch}]}]).
 
-stop(Pid) ->
-    cowboy:stop_listener(Pid).
+stop() ->
+    cowboy:stop_listener(?MODULE).

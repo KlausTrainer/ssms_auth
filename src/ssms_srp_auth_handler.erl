@@ -25,8 +25,8 @@
 
 %% External API
 
--spec init({ssl, http}, cowboy_req:req(), srp_config()) -> {ok, cowboy_req:req(), srp_opts()}.
-init(_Transport, _Req, SrpConfig) when SrpConfig =:= srp_1024; SrpConfig =:= srp_2048 ->
+-spec init({ssl, http}, cowboy_req:req(), srp_config()) -> {upgrade, protocol, cowboy_rest}.
+init({ssl, http}, _Req, SrpConfig) when SrpConfig =:= srp_1024; SrpConfig =:= srp_2048 ->
 	{upgrade, protocol, cowboy_rest}.
 
 rest_init(Req, SrpConfig) ->
@@ -42,7 +42,7 @@ content_types_accepted(Req, State) ->
 
 %% Internal API
 
--spec handle_post(cowboy_req:req(), srp_opts()) -> {ok, cowboy_req:req(), srp_opts()}.
+-spec handle_post(cowboy_req:req(), srp_opts()) -> {cowboy_req:req(), cowboy_req:req(), srp_opts()}.
 handle_post(Req, #srp_opts{generator=Generator, prime=Prime, version=Version} = Opts) ->
     {ok, Body, _} = cowboy_req:body(Req),
     {ok, Res} = case parse_req_body(Body) of

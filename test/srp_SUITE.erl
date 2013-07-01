@@ -1,9 +1,16 @@
 -module(srp_SUITE).
 -include_lib("common_test/include/ct.hrl").
 
--compile(export_all).
+%% ct
+-export([all/0, groups/0, init_per_suite/1, end_per_suite/1,
+	     init_per_group/2, end_per_group/2]).
 
--include("ssms_srp.hrl").
+%% tests
+-export([srp6a_unit/1]).
+-export([srp6a_integration/1]).
+-export([srp6a_benchmark/1]).
+
+-include("../include/ssms_srp.hrl").
 
 all() ->
     [
@@ -48,6 +55,7 @@ init_per_group(_GroupName, Config) ->
     Config.
 
 end_per_group(srp_integration, Config) ->
+    ok = ssms_web:stop(),
     ok = ssms_srp_auth_db:delete(?config(username, Config)),
     ok = ssms_srp_auth_db:stop(),
     ok = term_cache_ets:stop(?SRP_AUTH_CACHE),
