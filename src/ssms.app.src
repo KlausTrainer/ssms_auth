@@ -1,8 +1,18 @@
-{application, ssms,
- [{description, "ssms"},
-  {vsn, "0.1.0"},
-  {modules, []},
-  {mod, {ssms_app, []}},
-  {registered, []},
-  {env, []},
-  {applications, [kernel, stdlib]}]}.
+{application, ssms, [
+    {description, "ssms"},
+    {vsn, "0.1.0"},
+    {modules, []},
+    {mod, {ssms_app, []}},
+    {registered, []},
+    {env, []},
+    {applications, [
+        kernel,
+        stdlib,
+        crypto,
+        ranch,
+        cowboy,
+        bitcask,
+        sasl,
+        lager
+    ]}
+]}.

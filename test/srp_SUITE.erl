@@ -36,6 +36,7 @@ end_per_suite(_Config) ->
 init_per_group(srp_integration, Config) ->
     ok = application:start(ranch),
     ok = application:start(cowboy),
+    ok = application:start(bitcask),
     ok = application:start(ibrowse),
     SrpConfig = srp_2048,
     {ok, _} = ssms_srp_auth_db:start(code:lib_dir(ssms) ++ "/test/ssms_srp_auth_test_db.bitcask"),
@@ -60,6 +61,7 @@ end_per_group(srp_integration, Config) ->
     ok = ssms_srp_auth_db:stop(),
     ok = term_cache_ets:stop(?SRP_AUTH_CACHE),
     ok = application:stop(ibrowse),
+    ok = application:stop(bitcask),
     ok = application:stop(cowboy),
     ok = application:stop(ranch),
     Config;
