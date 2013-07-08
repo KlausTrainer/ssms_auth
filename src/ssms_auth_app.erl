@@ -1,5 +1,5 @@
 %% @private
--module(ssms_app).
+-module(ssms_auth_app).
 -behaviour(application).
 
 %% Application callbacks
@@ -10,7 +10,7 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    ssms_sup:start_link().
+    ssms_auth_sup:start_link().
 
 stop(_State) ->
     ok.

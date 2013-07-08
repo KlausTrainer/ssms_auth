@@ -1,8 +1,8 @@
-PROJECT = ssms
+PROJECT = ssms_auth
 
 # options
 
-CT_SUITES = srp
+CT_SUITES = ssms_auth
 PLT_APPS = crypto asn1 public_key ssl sasl
 
 # dependencies

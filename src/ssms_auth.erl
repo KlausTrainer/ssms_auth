@@ -1,4 +1,4 @@
--module(ssms).
+-module(ssms_auth).
 
 %% API
 -export([start/0]).
@@ -10,4 +10,4 @@ start() ->
     ok = application:start(bitcask),
     ok = application:start(sasl),
     ok = application:start(lager),
-    ok = application:start(ssms).
+    ok = application:start(ssms_auth).

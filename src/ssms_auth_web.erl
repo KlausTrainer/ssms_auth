@@ -1,16 +1,16 @@
--module(ssms_web).
+-module(ssms_auth_web).
 
 %% API
 -export([start/2, stop/0]).
 
--include("ssms_srp.hrl").
+-include("ssms_auth.hrl").
 
--spec start(inet:port_number(), ssms_srp_auth_handler:srp_config()) -> {ok, pid()}.
+-spec start(inet:port_number(), ssms_auth_handler:srp_config()) -> {ok, pid()}.
 start(Port, SrpConfig) ->
-    PrivDir = code:priv_dir(ssms),
+    PrivDir = code:priv_dir(ssms_auth),
     Dispatch = cowboy_router:compile([
         {'_', [
-            {"/srp_auth", ssms_srp_auth_handler, SrpConfig}
+            {"/srp_auth", ssms_auth_handler, SrpConfig}
         ]}
     ]),
     cowboy:start_https(?MODULE, 64, [

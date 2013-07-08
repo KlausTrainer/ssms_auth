@@ -1,4 +1,4 @@
--module(ssms_sup).
+-module(ssms_auth_sup).
 -behaviour(supervisor).
 
 %% API
@@ -7,7 +7,7 @@
 %% Supervisor callbacks
 -export([init/1]).
 
--include("ssms_srp.hrl").
+-include("ssms_auth.hrl").
 
 %% ===================================================================
 %% API functions
@@ -24,18 +24,18 @@ start_link() ->
 init([]) ->
     Processes = [
         {
-            ssms_srp_auth_db,
-            {ssms_srp_auth_db, start_link, ["priv/ssms_srp_auth_db.bitcask"]},
+            ssms_auth_db,
+            {ssms_auth_db, start_link, ["priv/ssms_auth_db.bitcask"]},
             permanent, 2000, worker, dynamic
         },
         {
             term_cache_ets,
-            {term_cache_ets, start_link, [[{ttl, 60000}, {name, ?SRP_AUTH_CACHE}]]},
+            {term_cache_ets, start_link, [[{ttl, 60000}, {name, ?SSMS_AUTH_CACHE}]]},
             permanent, 2000, worker, dynamic
         },
         {
-            ssms_web,
-            {ssms_web, start, [8443, srp_2048]},
+            ssms_auth_web,
+            {ssms_auth_web, start, [8443, srp_2048]},
             permanent, 2000, worker, dynamic
         }
     ],

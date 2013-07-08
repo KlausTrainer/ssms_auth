@@ -1,5 +1,5 @@
 %% @doc Handles storage of user account data.
--module(ssms_srp_auth_db).
+-module(ssms_auth_db).
 
 -behaviour(gen_server).
 

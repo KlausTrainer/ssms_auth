@@ -1,5 +1,5 @@
 %% @doc SRP authentication handler.
--module(ssms_srp_auth_handler).
+-module(ssms_auth_handler).
 
 %% API
 -export([init/3]).
@@ -19,7 +19,7 @@
 }).
 -type srp_opts() :: #srp_opts{}.
 
--include("ssms_srp.hrl").
+-include("ssms_auth.hrl").
 
 -define(RESPONSE_HEADERS, [{<<"content-type">>, <<"application/json; charset=utf-8">>}]).
 
@@ -49,7 +49,7 @@ handle_post(Req, #srp_opts{generator=Generator, prime=Prime, version=Version} = 
     error ->
         cowboy_req:reply(400, ?RESPONSE_HEADERS, <<"{\"error\":\"bad request\"}">>, Req);
     {{'I', Username}, {'A', ClientPublic}} ->
-        case ssms_srp_auth_db:lookup(Username) of
+        case ssms_auth_db:lookup(Username) of
         not_found ->
             %% FIXME simulate the existence of an entry for this user name
             %% c.f. RFC 5054 section 2.5.1.3
@@ -60,11 +60,11 @@ handle_post(Req, #srp_opts{generator=Generator, prime=Prime, version=Version} = 
             Response = jiffy:encode(
                 {[{<<"s">>, base64:encode(Salt)},
                 {<<"B">>, base64:encode(ServerPublic)}]}),
-            term_cache_ets:put(?SRP_AUTH_CACHE, SessionKey, true),
+            term_cache_ets:put(?SSMS_AUTH_CACHE, SessionKey, true),
             cowboy_req:reply(200, ?RESPONSE_HEADERS, Response, Req)
         end;
     {'M', ClientSecret} ->
-        case term_cache_ets:get(?SRP_AUTH_CACHE, ClientSecret) of
+        case term_cache_ets:get(?SSMS_AUTH_CACHE, ClientSecret) of
         not_found ->
             cowboy_req:reply(400, ?RESPONSE_HEADERS, <<"{\"error\":\"bad_record_mac\"}">>, Req);
         {ok, _} ->

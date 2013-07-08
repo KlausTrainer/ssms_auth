@@ -1,4 +1,4 @@
--module(srp_SUITE).
+-module(ssms_auth_SUITE).
 -include_lib("common_test/include/ct.hrl").
 
 %% ct
@@ -10,7 +10,7 @@
 -export([srp6a_integration/1]).
 -export([srp6a_benchmark/1]).
 
--include("../include/ssms_srp.hrl").
+-include("../include/ssms_auth.hrl").
 
 all() ->
     [
@@ -39,27 +39,27 @@ init_per_group(srp_integration, Config) ->
     ok = application:start(bitcask),
     ok = application:start(ibrowse),
     SrpConfig = srp_2048,
-    {ok, _} = ssms_srp_auth_db:start(code:lib_dir(ssms) ++ "/test/ssms_srp_auth_test_db.bitcask"),
-    {ok, _} = term_cache_ets:start([{ttl, 60000}, {name, ?SRP_AUTH_CACHE}]),
-    {ok, _} = ssms_web:start(0, SrpConfig),
-    SsmsWebPort = ranch:get_port(ssms_web),
+    {ok, _} = ssms_auth_db:start(code:lib_dir(ssms_auth) ++ "/test/ssms_auth_test_db.bitcask"),
+    {ok, _} = term_cache_ets:start([{ttl, 60000}, {name, ?SSMS_AUTH_CACHE}]),
+    {ok, _} = ssms_auth_web:start(0, SrpConfig),
+    SsmsWebPort = ranch:get_port(ssms_auth_web),
     {Generator, Prime} = ssl_srp_primes:get_srp_params(SrpConfig),
     Salt = crypto:strong_rand_bytes(32),
     Username = <<"alice">>,
     Password = <<"password123">>,
     UserPassHash = crypto:hash(sha, [Salt, crypto:hash(sha, [Username, <<$:>>, Password])]),
     Verifier = crypto:mod_pow(Generator, UserPassHash, Prime),
-    ssms_srp_auth_db:store(Username, {Salt, Verifier}),
-    [{ssms_web_port, SsmsWebPort}, {generator, Generator}, {prime, Prime},
+    ssms_auth_db:store(Username, {Salt, Verifier}),
+    [{ssms_auth_web_port, SsmsWebPort}, {generator, Generator}, {prime, Prime},
      {username, Username}, {password, Password} | Config];
 init_per_group(_GroupName, Config) ->
     Config.
 
 end_per_group(srp_integration, Config) ->
-    ok = ssms_web:stop(),
-    ok = ssms_srp_auth_db:delete(?config(username, Config)),
-    ok = ssms_srp_auth_db:stop(),
-    ok = term_cache_ets:stop(?SRP_AUTH_CACHE),
+    ok = ssms_auth_web:stop(),
+    ok = ssms_auth_db:delete(?config(username, Config)),
+    ok = ssms_auth_db:stop(),
+    ok = term_cache_ets:stop(?SSMS_AUTH_CACHE),
     ok = application:stop(ibrowse),
     ok = application:stop(bitcask),
     ok = application:stop(cowboy),
@@ -112,7 +112,7 @@ srp6a_unit(_Config) ->
     SessionKey = crypto:compute_key(srp, ClientPublic, {ServerPublic, ServerPrivate}, {host, [Verifier, Prime, Version, Scrambler]}).
 
 srp6a_integration(Config) ->
-    SsmsWebPort = ?config(ssms_web_port, Config),
+    SsmsWebPort = ?config(ssms_auth_web_port, Config),
     Username = ?config(username, Config),
     Password = ?config(password, Config),
     Generator = ?config(generator, Config),

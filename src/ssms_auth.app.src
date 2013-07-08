@@ -1,8 +1,8 @@
-{application, ssms, [
-    {description, "ssms"},
+{application, ssms_auth, [
+    {description, "ssms authentication server"},
     {vsn, "0.1.0"},
     {modules, []},
-    {mod, {ssms_app, []}},
+    {mod, {ssms_auth_app, []}},
     {registered, []},
     {env, []},
     {applications, [
