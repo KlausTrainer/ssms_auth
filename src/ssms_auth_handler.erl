@@ -42,10 +42,10 @@ content_types_accepted(Req, State) ->
 
 %% Internal API
 
--spec handle_post(cowboy_req:req(), srp_opts()) -> {cowboy_req:req(), cowboy_req:req(), srp_opts()}.
+-spec handle_post(cowboy_req:req(), srp_opts()) -> {halt, cowboy_req:req(), srp_opts()}.
 handle_post(Req, #srp_opts{generator=Generator, prime=Prime, version=Version} = Opts) ->
     {ok, Body, _} = cowboy_req:body(Req),
-    {ok, Res} = case parse_req_body(Body) of
+    {ok, _Response} = case parse_req_body(Body) of
     error ->
         cowboy_req:reply(400, ?RESPONSE_HEADERS, <<"{\"error\":\"bad request\"}">>, Req);
     {{'I', Username}, {'A', ClientPublic}} ->
@@ -71,7 +71,7 @@ handle_post(Req, #srp_opts{generator=Generator, prime=Prime, version=Version} = 
             cowboy_req:reply(200, ?RESPONSE_HEADERS, <<"{}">>, Req)
         end
     end,
-    {Res, Req, Opts}.
+    {halt, Req, Opts}.
 
 parse_req_body(Body) ->
     try
