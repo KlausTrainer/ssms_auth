@@ -7,7 +7,7 @@
 -export([allowed_methods/2]).
 -export([content_types_accepted/2]).
 
--export([handle_post/2]).
+-export([accept_json/2]).
 
 -type srp_config() :: srp_1024 | srp_2048.
 -export_type([srp_config/0]).
@@ -38,12 +38,12 @@ allowed_methods(Req, State) ->
     {[<<"POST">>], Req, State}.
 
 content_types_accepted(Req, State) ->
-    {[{{<<"application">>, <<"json">>, []}, handle_post}], Req, State}.
+    {[{{<<"application">>, <<"json">>, []}, accept_json}], Req, State}.
 
 %% Internal API
 
--spec handle_post(cowboy_req:req(), srp_opts()) -> {halt, cowboy_req:req(), srp_opts()}.
-handle_post(Req, #srp_opts{generator=Generator, prime=Prime, version=Version} = Opts) ->
+-spec accept_json(cowboy_req:req(), srp_opts()) -> {halt, cowboy_req:req(), srp_opts()}.
+accept_json(Req, #srp_opts{generator=Generator, prime=Prime, version=Version} = Opts) ->
     {ok, Body, _} = cowboy_req:body(Req),
     {ok, _Response} = case parse_req_body(Body) of
     error ->
