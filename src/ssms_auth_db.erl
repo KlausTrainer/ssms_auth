@@ -4,7 +4,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/1, start_link/1, stop/0]).
+-export([start/0, start_link/0, stop/0]).
 -export([lookup/1, delete/1, store/2]).
 
 %% gen_server callbacks
@@ -16,15 +16,15 @@
 
 %% External API
 
--spec start(string()) -> {ok, pid()} | ignore | {error, term()}.
-start(DbPath) ->
+-spec start() -> {ok, pid()} | ignore | {error, term()}.
+start() ->
     gen_server:start({local, ?MODULE}, ?MODULE,
-                          [DbPath], []).
+                          [db_path()], []).
 
--spec start_link(string()) -> {ok, pid()} | ignore | {error, term()}.
-start_link(DbPath) ->
+-spec start_link() -> {ok, pid()} | ignore | {error, term()}.
+start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE,
-                          [DbPath], []).
+                          [db_path()], []).
 
 -spec stop() -> ok.
 stop() ->
@@ -81,3 +81,10 @@ code_change(_OldVsn, State, _Extra) ->
 
 terminate(_Reason, State) ->
     bitcask:close(State).
+
+
+%% internal API
+
+db_path() ->
+    PrivDir = code:priv_dir(ssms_auth),
+    ssms_auth:get_app_env(db_path, PrivDir ++ "/ssms_auth_db.bitcask").
