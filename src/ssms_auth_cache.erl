@@ -19,7 +19,7 @@
 % This implementation uses ets tables to store keys and values (one table for
 % keys and another one for values).
 
--module(term_cache_ets).
+-module(ssms_auth_cache).
 -behaviour(gen_server).
 
 % public API

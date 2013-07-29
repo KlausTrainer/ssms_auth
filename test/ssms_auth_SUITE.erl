@@ -10,7 +10,6 @@
 -export([srp6a_integration/1]).
 -export([srp6a_benchmark/1]).
 
--include("../include/ssms_auth.hrl").
 
 all() ->
     [
@@ -40,7 +39,7 @@ init_per_group(srp_integration, Config) ->
     ok = application:start(ibrowse),
     SrpConfig = srp_2048,
     {ok, _} = ssms_auth_db:start(code:lib_dir(ssms_auth) ++ "/test/ssms_auth_test_db.bitcask"),
-    {ok, _} = term_cache_ets:start([{ttl, 60000}, {name, ?SSMS_AUTH_CACHE}]),
+    {ok, _} = ssms_auth_cache:start([{ttl, 60000}, {name, ssms_auth_cache}]),
     {ok, _} = ssms_auth_web:start(0, SrpConfig),
     SsmsWebPort = ranch:get_port(ssms_auth_web),
     {Generator, Prime} = ssl_srp_primes:get_srp_params(SrpConfig),
@@ -59,7 +58,7 @@ end_per_group(srp_integration, Config) ->
     ok = ssms_auth_web:stop(),
     ok = ssms_auth_db:delete(?config(username, Config)),
     ok = ssms_auth_db:stop(),
-    ok = term_cache_ets:stop(?SSMS_AUTH_CACHE),
+    ok = ssms_auth_cache:stop(ssms_auth_cache),
     ok = application:stop(ibrowse),
     ok = application:stop(bitcask),
     ok = application:stop(cowboy),

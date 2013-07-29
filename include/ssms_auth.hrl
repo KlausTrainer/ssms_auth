@@ -1,1 +1,0 @@
--define(SSMS_AUTH_CACHE, ssms_auth_cache).

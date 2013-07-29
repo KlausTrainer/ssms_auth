@@ -7,7 +7,6 @@
 %% Supervisor callbacks
 -export([init/1]).
 
--include("ssms_auth.hrl").
 
 %% ===================================================================
 %% API functions
@@ -29,8 +28,8 @@ init([]) ->
             permanent, 2000, worker, dynamic
         },
         {
-            term_cache_ets,
-            {term_cache_ets, start_link, [[{ttl, 60000}, {name, ?SSMS_AUTH_CACHE}]]},
+            ssms_auth_cache,
+            {ssms_auth_cache, start_link, [[{ttl, 60000}, {name, ssms_auth_cache}]]},
             permanent, 2000, worker, dynamic
         },
         {

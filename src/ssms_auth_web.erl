@@ -3,7 +3,6 @@
 %% API
 -export([start/2, stop/0]).
 
--include("ssms_auth.hrl").
 
 -spec start(inet:port_number(), ssms_auth_handler:srp_config()) -> {ok, pid()}.
 start(Port, SrpConfig) ->

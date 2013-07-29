@@ -19,9 +19,8 @@
 }).
 -type srp_opts() :: #srp_opts{}.
 
--include("ssms_auth.hrl").
-
 -define(RESPONSE_HEADERS, [{<<"content-type">>, <<"application/json; charset=utf-8">>}]).
+
 
 %% External API
 
@@ -60,11 +59,11 @@ accept_json(Req, #srp_opts{generator=Generator, prime=Prime, version=Version} = 
             Response = jiffy:encode(
                 {[{<<"s">>, base64:encode(Salt)},
                 {<<"B">>, base64:encode(ServerPublic)}]}),
-            term_cache_ets:put(?SSMS_AUTH_CACHE, SessionKey, true),
+            ssms_auth_cache:put(ssms_auth_cache, SessionKey, true),
             cowboy_req:reply(200, ?RESPONSE_HEADERS, Response, Req)
         end;
     {'M', ClientSecret} ->
-        case term_cache_ets:get(?SSMS_AUTH_CACHE, ClientSecret) of
+        case ssms_auth_cache:get(ssms_auth_cache, ClientSecret) of
         not_found ->
             cowboy_req:reply(400, ?RESPONSE_HEADERS, <<"{\"error\":\"bad_record_mac\"}">>, Req);
         {ok, _} ->
