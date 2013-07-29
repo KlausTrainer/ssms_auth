@@ -33,6 +33,7 @@ end_per_suite(_Config) ->
     ok = application:stop(crypto).
 
 init_per_group(srp_integration, Config) ->
+    ok = application:start(jiffy),
     ok = application:start(ranch),
     ok = application:start(cowboy),
     ok = application:start(bitcask),
@@ -67,6 +68,7 @@ end_per_group(srp_integration, Config) ->
     ok = application:stop(bitcask),
     ok = application:stop(cowboy),
     ok = application:stop(ranch),
+    ok = application:stop(jiffy),
     Config;
 end_per_group(_GroupName, Config) ->
     Config.
